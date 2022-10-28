@@ -1,3 +1,5 @@
+//#define DEBUG
+
 #include "LowPower.h"
 #include <EEPROM.h>
 #include "TonePlayer.h"
@@ -76,14 +78,17 @@ void pirStatusChanged() {
 }
 
 void setup() {
+#ifdef DEBUG    
   Serial.begin(9600);
   while (!Serial)
     ;
   Serial.println("Started.");
-
+#endif
   currentAlarm = EEPROM.read(EEPROM_CURRENT_ALARM);
+#ifdef DEBUG  
   Serial.print("Current alarm: ");
   Serial.println(currentAlarm);
+#endif  
   if (currentAlarm > sizeof(Alarms) / sizeof(Alarm))
     currentAlarm = 0;
 
@@ -111,8 +116,9 @@ void handleButtonInput(unsigned long frameTimeMs, void (*gotWordHandler)(String&
   static String word{};
 
   if (word.length() > 0 && button.State() == ButtonState::Released && frameTimeMs - button.LastChangedMs() > 500) {
+#ifdef DEBUG      
     Serial.println(word.c_str());
-
+#endif
     gotWordHandler(word);
 
     word = "";
@@ -121,32 +127,34 @@ void handleButtonInput(unsigned long frameTimeMs, void (*gotWordHandler)(String&
   if (button.State() != bs) {
 
     unsigned long duration;
-
+#ifdef DEBUG  
     String msg{};
+#endif    
 
     if (button.State() == ButtonState::Pressed) {
       duration = button.ReleasedMs();
 
-      //tone(PIN_MORSE, 700);
       digitalWrite(PIN_MORSE, HIGH);
-      //analogWrite(PIN_MORSE, 255);
     } else {
       duration = button.PressedMs();
-      //noTone(PIN_MORSE);
       digitalWrite(PIN_MORSE, LOW);
 
       if (duration < 120) {
+#ifdef DEBUG          
         msg += "DOT ";
+#endif        
         word += ".";
       } else {
+#ifdef DEBUG            
         msg += "DASH ";
+#endif        
         word += "-";
       }
     }
-
+#ifdef DEBUG  
     msg += duration;
     Serial.println(msg.c_str());
-
+#endif
     bs = button.State();
   }
 }
@@ -174,11 +182,12 @@ void gotWordHandler(String& word) {
   } else if (word == "-----") {
     tonePlayer.Stop();
   }
-
+#ifdef DEBUG  
   else if (word == ".-") {
     Serial.print("fps: ");
     Serial.println(iteration / (millis() / 1000.0));
   }
+#endif  
 }
 
 void loop() {
@@ -223,11 +232,16 @@ void loop() {
   tonePlayer.Update();
 
   if (frameTimeMs - lastInterruptMs > 12000 && !tonePlayer.IsPlaying()) {
+#ifdef DEBUG      
     Serial.println("Going to sleep.");
     Serial.flush();
+#endif    
     blinker.Stop();
     LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
+#ifdef DEBUG      
     Serial.println("Waking up.");
+#endif    
+    lastInterruptMs = millis();
     blinker.Resume();
   }
 
